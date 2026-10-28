@@ -49,6 +49,27 @@ function formatTime(totalSeconds) {
 }
 
 
+function formatStudyDuration(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0 && minutes > 0) {
+        return `${hours}시간 ${minutes}분`;
+    }
+
+    if (hours > 0) {
+        return `${hours}시간`;
+    }
+
+    if (minutes > 0) {
+        return `${minutes}분`;
+    }
+
+    return `${seconds}초`;
+}
+
+
 function updateTimerDisplay() {
 
     const seconds = timerMode === "stopwatch"
@@ -111,11 +132,19 @@ function renderRecords() {
         const item = document.createElement("div");
         item.className = "record-item";
 
+
+        const information = document.createElement("div");
+        information.className = "record-information";
+
         const description = document.createElement("span");
+        description.className = "record-title";
         description.textContent = record.label;
 
         const duration = document.createElement("span");
-        duration.textContent = formatTime(record.seconds);
+        duration.className = "record-duration";
+        duration.textContent = formatStudyDuration(record.seconds);
+
+        information.append(description, duration);
 
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
@@ -131,10 +160,6 @@ function renderRecords() {
             renderRecords();
 
         });
-
-        const information = document.createElement("div");
-
-        information.append(description, duration);
 
         item.append(information, deleteButton);
 

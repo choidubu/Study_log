@@ -626,21 +626,53 @@ select {
     gap: 10px;
 }
 
+
 .record-item {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 13px;
-    background: #FAF9FD;
-    border-radius: 10px;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid #EAE8F2;
+    border-radius: 14px;
+    background: #FFFFFF;
+    margin-bottom: 0;
+}
+
+.record-information {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.record-title {
+    color: #333245;
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.record-duration {
+    color: #77758A;
     font-size: 13px;
 }
 
 .record-item button {
-    background: transparent;
-    border: 0;
-    color: #858398;
+    flex-shrink: 0;
+    padding: 7px 12px;
+    border: 1px solid #EAE8F2;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #77758A;
     font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.record-item button:hover {
+    background: #F5F3FA;
+    color: #514A70;
 }
 
 
@@ -855,5 +887,24 @@ select {
     .material-item-bottom {
         font-size: 11px;
     }
+
+
+    .record-item {
+        gap: 10px;
+        padding: 14px;
+    }
+
+    .record-title {
+        font-size: 14px;
+    }
+
+    .record-duration {
+        font-size: 12px;
+    }
+
+    .record-item button {
+        padding: 7px 10px;
+    }
+
 
 }
