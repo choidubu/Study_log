@@ -1,3 +1,26 @@
+:root {
+    --schedule-study-bg: #EEE9FF;
+    --schedule-study-text: #6D59C2;
+    --schedule-study-dot: #9B88EA;
+
+    --schedule-lecture-bg: #E4F5E9;
+    --schedule-lecture-text: #3E8054;
+    --schedule-lecture-dot: #83C99A;
+
+    --schedule-deadline-bg: #FFF0E0;
+    --schedule-deadline-text: #B96A2D;
+    --schedule-deadline-dot: #F2B477;
+
+    --schedule-exam-bg: #FCE8EC;
+    --schedule-exam-text: #B84D64;
+    --schedule-exam-dot: #E78A9B;
+
+    --schedule-general-bg: #ECEEF2;
+    --schedule-general-text: #626B78;
+    --schedule-general-dot: #A4ABB6;
+}
+
+
 /* RESET */
 
 * {
@@ -376,18 +399,36 @@ select {
 }
 
 .event-study {
-    background: #EEE9FF;
-    color: #6D59C2;
+    background: var(--schedule-study-bg);
+    color: var(--schedule-study-text);
 }
 
 .event-lecture {
-    background: #E4F5E9;
-    color: #3E8054;
+    background: var(--schedule-lecture-bg);
+    color: var(--schedule-lecture-text);
 }
 
 .event-deadline {
-    background: #FFF0E0;
-    color: #B96A2D;
+    background: var(--schedule-deadline-bg);
+    color: var(--schedule-deadline-text);
+}
+
+.event-exam {
+    background: var(--schedule-exam-bg);
+    color: var(--schedule-exam-text);
+}
+
+.event-general {
+    background: var(--schedule-general-bg);
+    color: var(--schedule-general-text);
+}
+
+.red-dot {
+    background: var(--schedule-exam-dot);
+}
+
+.gray-dot {
+    background: var(--schedule-general-dot);
 }
 
 .more-events {
@@ -417,15 +458,15 @@ select {
 }
 
 .purple-dot {
-    background: #9B88EA;
+    background: var(--schedule-study-dot);
 }
 
 .green-dot {
-    background: #83C99A;
+    background: var(--schedule-lecture-dot);
 }
 
 .orange-dot {
-    background: #F2B477;
+    background: var(--schedule-deadline-dot);
 }
 
 
