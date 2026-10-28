@@ -21,21 +21,38 @@
 
 
     <!-- MAIN -->
-
     <main class="container">
 
         <!-- SUMMARY -->
 
         <section class="summary">
 
-            <div class="summary-card purple">
-                <p>오늘 공부 시간</p>
-                <h2 id="today-total">00:00:00</h2>
-            </div>
-
             <div class="summary-card green">
                 <p>오늘의 목표</p>
-                <h2>3시간</h2>
+
+                <h2 id="goal-target-display">3시간</h2>
+
+                <div class="goal-settings">
+                    <input type="number" id="goal-hours" min="1" max="24" value="3" aria-label="오늘의 목표 시간">
+
+                    <button type="button" id="goal-save-button">
+                        목표 설정
+                    </button>
+                </div>
+            </div>
+
+            <div class="summary-card purple">
+                <p>공부 시간 달성</p>
+
+                <h2 id="today-total">00:00:00</h2>
+
+                <p id="goal-progress-text">00:00:00 / 03:00:00</p>
+
+                <div class="goal-progress-track">
+                    <div id="goal-progress-bar" class="goal-progress-bar"></div>
+                </div>
+
+                <p id="goal-progress-percent">0% 달성</p>
             </div>
 
             <div class="summary-card orange">

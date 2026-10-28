@@ -4,6 +4,13 @@
 const timerDisplay = document.querySelector("#timer-display");
 const todayTotal = document.querySelector("#today-total");
 const timerMessage = document.querySelector("#timer-message");
+const goalHoursInput = document.querySelector("#goal-hours");
+const goalTargetDisplay = document.querySelector("#goal-target-display");
+const goalProgressText = document.querySelector("#goal-progress-text");
+const goalProgressBar = document.querySelector("#goal-progress-bar");
+const goalProgressPercent = document.querySelector("#goal-progress-percent");
+
+let dailyGoalHours = 3;
 
 const startButton = document.querySelector("#start-button");
 const pauseButton = document.querySelector("#pause-button");
@@ -54,9 +61,29 @@ function updateTimerDisplay() {
 
 
 function updateTodayTotal() {
-
     todayTotal.textContent = formatTime(todayStudySeconds);
 
+    updateGoalProgress();
+}
+
+function updateGoalProgress() {
+    const targetSeconds = dailyGoalHours * 3600;
+
+    const percentage = Math.min(
+        100,
+        Math.floor(todayStudySeconds / targetSeconds * 100)
+    );
+
+    goalTargetDisplay.textContent = `${dailyGoalHours}시간`;
+
+    goalProgressText.textContent =
+        `${formatTime(todayStudySeconds)} / ${formatTime(targetSeconds)}`;
+
+    goalProgressBar.style.width = `${percentage}%`;
+
+    goalProgressPercent.textContent = percentage >= 100
+        ? "목표 달성! 🎉"
+        : `${percentage}% 달성`;
 }
 
 
@@ -359,6 +386,22 @@ pauseButton.addEventListener("click", pauseTimer);
 
 resetButton.addEventListener("click", resetTimer);
 
+document.querySelector("#goal-save-button").addEventListener("click", () => {
+    const hours = Number(goalHoursInput.value);
+
+    if (
+        !Number.isInteger(hours) ||
+        hours < 1 ||
+        hours > 24
+    ) {
+        alert("목표 시간은 1시간부터 24시간까지 입력해 줘.");
+        return;
+    }
+
+    dailyGoalHours = hours;
+
+    updateGoalProgress();
+});
 
 document.querySelector("#manual-save-button").addEventListener("click", () => {
 
