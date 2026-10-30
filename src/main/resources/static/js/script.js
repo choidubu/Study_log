@@ -1,4 +1,3 @@
-
 /* TIMER */
 
 const timerDisplay = document.querySelector("#timer-display");
@@ -108,7 +107,43 @@ function updateGoalProgress() {
 }
 
 
-function renderRecords() {
+async function loadStudyRecords() {
+
+    try {
+        const response = await fetch("/api/study-records");
+
+        if (!response.ok) {
+            throw new Error("공부 기록을 불러오지 못했어.");
+        }
+
+        const records = await response.json();
+
+        studyRecords.splice(0, studyRecords.length);
+
+        records.forEach((record) => {
+            studyRecords.push({
+                id: record.id,
+                label: record.label,
+                seconds: record.seconds
+            });
+        });
+
+        todayStudySeconds = studyRecords.reduce(
+            (total, record) => total + record.seconds,
+            0
+        );
+
+        updateTodayTotal();
+        renderRecords();
+
+    } catch (error) {
+        console.error("공부 기록 조회 오류:", error);
+    }
+
+}
+
+
+async function renderRecords() {
 
     const recordList = document.querySelector("#record-list");
 
@@ -127,11 +162,10 @@ function renderRecords() {
 
     }
 
-    studyRecords.forEach((record, index) => {
+    studyRecords.forEach((record) => {
 
         const item = document.createElement("div");
         item.className = "record-item";
-
 
         const information = document.createElement("div");
         information.className = "record-information";
@@ -150,14 +184,29 @@ function renderRecords() {
         deleteButton.type = "button";
         deleteButton.textContent = "삭제";
 
-        deleteButton.addEventListener("click", () => {
+        deleteButton.addEventListener("click", async () => {
 
-            todayStudySeconds -= record.seconds;
+            try {
 
-            studyRecords.splice(index, 1);
+                const response = await fetch(
+                    `/api/study-records/${record.id}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
 
-            updateTodayTotal();
-            renderRecords();
+                if (!response.ok) {
+                    throw new Error("기록 삭제에 실패했어.");
+                }
+
+                await loadStudyRecords();
+
+            } catch (error) {
+
+                console.error("공부 기록 삭제 오류:", error);
+                alert("기록을 삭제하지 못했어. 서버 연결을 확인해 줺.");
+
+            }
 
         });
 
@@ -170,21 +219,38 @@ function renderRecords() {
 }
 
 
-function saveStudyRecord(seconds, label) {
+async function saveStudyRecord(seconds, label) {
 
     if (seconds <= 0) {
-        return;
+        return false;
     }
 
-    studyRecords.push({
-        seconds: seconds,
-        label: label
-    });
+    try {
+        const response = await fetch("/api/study-records", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                label: label,
+                seconds: seconds
+            })
+        });
 
-    todayStudySeconds += seconds;
+        if (!response.ok) {
+            throw new Error("공부 기록 저장에 실패했어.");
+        }
 
-    updateTodayTotal();
-    renderRecords();
+        await loadStudyRecords();
+
+        return true;
+
+    } catch (error) {
+        console.error("공부 기록 저장 오류:", error);
+        alert("공부 기록을 저장하지 못했어. 서버 연결을 확인해 줘.");
+
+        return false;
+    }
 
 }
 
@@ -222,21 +288,29 @@ function finishTimer() {
     saveButton.className = "button button-primary";
     saveButton.textContent = "기록 저장";
 
-    saveButton.addEventListener("click", () => {
 
-        saveStudyRecord(
+    saveButton.addEventListener("click", async () => {
+
+        saveButton.disabled = true;
+
+        const saved = await saveStudyRecord(
             pendingStudySeconds,
             timerMode === "stopwatch" ? "스톱워치" : "카운트다운"
         );
 
-        timerMessage.textContent = "공부 기록을 저장했어!";
+        if (saved) {
+            timerMessage.textContent = "공부 기록을 저장했어!";
 
-        sessionFinished = false;
-        pendingStudySeconds = 0;
+            sessionFinished = false;
+            pendingStudySeconds = 0;
 
-        saveButton.remove();
+            saveButton.remove();
+        } else {
+            saveButton.disabled = false;
+        }
 
     });
+
 
     const oldSaveButton = document.querySelector("#save-session-button");
 
@@ -428,7 +502,8 @@ document.querySelector("#goal-save-button").addEventListener("click", () => {
     updateGoalProgress();
 });
 
-document.querySelector("#manual-save-button").addEventListener("click", () => {
+
+document.querySelector("#manual-save-button").addEventListener("click", async () => {
 
     const hours = Number(document.querySelector("#manual-hours").value);
     const minutes = Number(document.querySelector("#manual-minutes").value);
@@ -442,21 +517,21 @@ document.querySelector("#manual-save-button").addEventListener("click", () => {
         minutes > 59 ||
         hours * 60 + minutes <= 0
     ) {
-
         timerMessage.textContent = "시간과 분을 올바르게 입력해 줘.";
 
         return;
-
     }
 
     const totalSeconds = hours * 3600 + minutes * 60;
 
-    saveStudyRecord(totalSeconds, "직접 입력");
+    const saved = await saveStudyRecord(totalSeconds, "직접 입력");
 
-    document.querySelector("#manual-hours").value = "";
-    document.querySelector("#manual-minutes").value = "";
+    if (saved) {
+        document.querySelector("#manual-hours").value = "";
+        document.querySelector("#manual-minutes").value = "";
 
-    timerMessage.textContent = "공부 시간을 기록에 추가했어!";
+        timerMessage.textContent = "공부 시간을 기록에 추가했어!";
+    }
 
 });
 
@@ -470,6 +545,7 @@ const selectedDateTitle = document.querySelector("#selected-date-title");
 const scheduleForm = document.querySelector("#schedule-form");
 const scheduleTitle = document.querySelector("#schedule-title");
 const scheduleType = document.querySelector("#schedule-type");
+const scheduleDate = document.querySelector("#schedule-date");
 const scheduleList = document.querySelector("#schedule-list");
 
 const scheduleTypes = {
@@ -482,33 +558,65 @@ const today = new Date();
 
 let displayedYear = today.getFullYear();
 let displayedMonth = today.getMonth();
-
 let selectedDate = formatDate(today);
 
-const schedules = [];
+let schedules = [];
 
-let nextScheduleId = 1;
+// 날짜 입력창의 초기 날짜 설정
+scheduleDate.value = selectedDate;
 
 
 function formatDate(date) {
-
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
-
 }
 
 
-function renderCalendar() {
+// 서버에서 일정 불러오기
+async function loadSchedules() {
+    try {
+        const response = await fetch("/api/schedules");
 
+        if (!response.ok) {
+            throw new Error("일정을 불러오지 못했습니다.");
+        }
+
+        const data = await response.json();
+
+        schedules = data.map((schedule) => ({
+            id: schedule.id,
+            date: String(schedule.schedule_date).slice(0, 10),
+            title: schedule.title,
+            type: schedule.schedule_type,
+            completed: schedule.completed
+        }));
+
+        renderCalendar();
+        renderSchedules();
+        updateCompletedCount();
+
+    } catch (error) {
+        console.error("일정 조회 오류:", error);
+        alert("일정을 불러오지 못했어. 서버와 DB를 확인해 줘.");
+    }
+}
+
+
+// 달력 그리기
+function renderCalendar() {
     calendarMonth.textContent =
         `${displayedYear}년 ${displayedMonth + 1}월`;
 
     calendarDays.replaceChildren();
 
-    const firstDay = new Date(displayedYear, displayedMonth, 1).getDay();
+    const firstDay = new Date(
+        displayedYear,
+        displayedMonth,
+        1
+    ).getDay();
 
     const lastDate = new Date(
         displayedYear,
@@ -517,22 +625,18 @@ function renderCalendar() {
     ).getDate();
 
     for (let i = 0; i < firstDay; i += 1) {
-
-        const blank = document.createElement("div");
-
-        calendarDays.appendChild(blank);
-
+        calendarDays.appendChild(document.createElement("div"));
     }
 
     for (let day = 1; day <= lastDate; day += 1) {
-
-        const date = new Date(displayedYear, displayedMonth, day);
-        const dateKey = formatDate(date);
+        const dateKey =
+            `${displayedYear}-${String(displayedMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
         const dayButton = document.createElement("button");
 
         dayButton.type = "button";
         dayButton.className = "calendar-day";
+        dayButton.dataset.date = dateKey;
 
         if (dateKey === formatDate(today)) {
             dayButton.classList.add("today");
@@ -554,7 +658,6 @@ function renderCalendar() {
         );
 
         daySchedules.slice(0, 2).forEach((schedule) => {
-
             const event = document.createElement("span");
 
             event.className = `calendar-event event-${schedule.type}`;
@@ -562,40 +665,33 @@ function renderCalendar() {
             event.title = schedule.title;
 
             dayButton.appendChild(event);
-
         });
 
         if (daySchedules.length > 2) {
-
             const more = document.createElement("span");
 
             more.className = "more-events";
             more.textContent = `+${daySchedules.length - 2}개`;
 
             dayButton.appendChild(more);
-
         }
 
         dayButton.addEventListener("click", () => {
-
             selectedDate = dateKey;
+            scheduleDate.value = dateKey;
 
             renderCalendar();
             renderSchedules();
-
         });
 
         calendarDays.appendChild(dayButton);
-
     }
-
 }
 
 
+// 선택한 날짜의 일정 표시
 function renderSchedules() {
-
-    selectedDateTitle.textContent =
-        `${selectedDate} 일정`;
+    selectedDateTitle.textContent = `${selectedDate} 일정`;
 
     scheduleList.replaceChildren();
 
@@ -604,18 +700,15 @@ function renderSchedules() {
     );
 
     if (daySchedules.length === 0) {
-
         const emptyMessage = document.createElement("p");
 
         emptyMessage.className = "empty-message";
         emptyMessage.textContent = "등록된 일정이 없어.";
 
         scheduleList.appendChild(emptyMessage);
-
     }
 
     daySchedules.forEach((schedule) => {
-
         const item = document.createElement("div");
 
         item.className = "schedule-item";
@@ -633,14 +726,34 @@ function renderSchedules() {
             `${schedule.title} 완료 여부`
         );
 
-        checkbox.addEventListener("change", () => {
+        // 완료 상태를 DB에 저장
+        checkbox.addEventListener("change", async () => {
+            try {
+                const response = await fetch(
+                    `/api/schedules/${schedule.id}/completed`,
+                    {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            completed: checkbox.checked
+                        })
+                    }
+                );
 
-            schedule.completed = checkbox.checked;
+                if (!response.ok) {
+                    throw new Error("일정 상태 변경에 실패했습니다.");
+                }
 
-            renderCalendar();
-            renderSchedules();
-            updateCompletedCount();
+                await loadSchedules();
 
+            } catch (error) {
+                console.error("일정 완료 상태 변경 오류:", error);
+                alert("완료 상태를 저장하지 못했어.");
+
+                await loadSchedules();
+            }
         });
 
         const content = document.createElement("div");
@@ -655,7 +768,7 @@ function renderSchedules() {
         const type = document.createElement("p");
 
         type.className = "schedule-type";
-        type.textContent = scheduleTypes[schedule.type];
+        type.textContent = scheduleTypes[schedule.type] ?? schedule.type;
 
         content.append(title, type);
 
@@ -664,101 +777,145 @@ function renderSchedules() {
         deleteButton.type = "button";
         deleteButton.textContent = "삭제";
 
-        deleteButton.addEventListener("click", () => {
+        // DB에서 일정 삭제
+        deleteButton.addEventListener("click", async () => {
+            try {
+                const response = await fetch(
+                    `/api/schedules/${schedule.id}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
 
-            const index = schedules.findIndex(
-                (item) => item.id === schedule.id
-            );
+                if (!response.ok) {
+                    throw new Error("일정 삭제에 실패했습니다.");
+                }
 
-            if (index !== -1) {
-                schedules.splice(index, 1);
+                await loadSchedules();
+
+            } catch (error) {
+                console.error("일정 삭제 오류:", error);
+                alert("일정을 삭제하지 못했어. 서버 로그를 확인해 줘.");
             }
-
-            renderCalendar();
-            renderSchedules();
-            updateCompletedCount();
-
         });
 
         item.append(checkbox, content, deleteButton);
 
         scheduleList.appendChild(item);
-
     });
-
 }
 
 
+// 완료한 일정 개수
 function updateCompletedCount() {
-
     const completedCount = schedules.filter(
         (schedule) => schedule.completed
     ).length;
 
     document.querySelector("#completed-count").textContent =
         `${completedCount}개`;
-
 }
 
 
-scheduleForm.addEventListener("submit", (event) => {
+// 날짜 입력창에서 날짜를 바꾸면 달력 선택도 동기화
+scheduleDate.addEventListener("change", () => {
+    if (!scheduleDate.value) {
+        return;
+    }
 
+    selectedDate = scheduleDate.value;
+
+    const [year, month] = selectedDate.split("-").map(Number);
+
+    displayedYear = year;
+    displayedMonth = month - 1;
+
+    renderCalendar();
+    renderSchedules();
+});
+
+
+// 일정 등록 후 서버에서 다시 불러오기
+
+scheduleForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const title = scheduleTitle.value.trim();
+    const dateToSave = scheduleDate.value;
 
     if (!title) {
         return;
     }
 
-    schedules.push({
-        id: nextScheduleId,
-        date: selectedDate,
-        title: title,
-        type: scheduleType.value,
-        completed: false
-    });
+    if (!dateToSave) {
+        alert("일정 날짜를 선택해 줘.");
+        return;
+    }
 
-    nextScheduleId += 1;
+    // 입력창에서 선택한 날짜를 그대로 사용
+    selectedDate = dateToSave;
 
-    scheduleTitle.value = "";
+    const [year, month] = dateToSave.split("-").map(Number);
 
-    renderCalendar();
-    renderSchedules();
-    updateCompletedCount();
+    displayedYear = year;
+    displayedMonth = month - 1;
 
+    try {
+        const response = await fetch("/api/schedules", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                date: scheduleDate.value,
+                title: title,
+                type: scheduleType.value
+            })
+        });
+
+        if (!response.ok) {
+            const errorMessage = await response.text();
+
+            throw new Error(
+                `일정 등록 실패 (${response.status}): ${errorMessage}`
+            );
+        }
+
+        scheduleTitle.value = "";
+
+        await loadSchedules();
+
+    } catch (error) {
+        console.error("일정 등록 오류:", error);
+        alert("일정을 등록하지 못했어. 브라우저 콘솔과 서버 로그를 확인해 줘.");
+    }
 });
 
 
-document.querySelector("#prev-month").addEventListener("click", () => {
 
+// 이전 달
+document.querySelector("#prev-month").addEventListener("click", () => {
     displayedMonth -= 1;
 
     if (displayedMonth < 0) {
-
         displayedMonth = 11;
         displayedYear -= 1;
-
     }
 
     renderCalendar();
-
 });
 
 
+// 다음 달
 document.querySelector("#next-month").addEventListener("click", () => {
-
     displayedMonth += 1;
 
     if (displayedMonth > 11) {
-
         displayedMonth = 0;
         displayedYear += 1;
-
     }
 
     renderCalendar();
-
 });
 
 
@@ -767,17 +924,41 @@ document.querySelector("#next-month").addEventListener("click", () => {
 const materialForm = document.querySelector("#material-form");
 const materialList = document.querySelector("#material-list");
 
-const materials = [];
-
-let nextMaterialId = 1;
+let materials = [];
 
 
+// 서버에서 학습 자료 불러오기
+async function loadMaterials() {
+    try {
+        const response = await fetch("/api/learning-materials");
+
+        if (!response.ok) {
+            throw new Error("학습 자료를 불러오지 못했습니다.");
+        }
+
+        const data = await response.json();
+
+        materials = data.map((material) => ({
+            id: material.id,
+            title: material.title,
+            total: material.total_pages,
+            current: material.current_page
+        }));
+
+        renderMaterials();
+
+    } catch (error) {
+        console.error("학습 자료 조회 오류:", error);
+        alert("학습 자료를 불러오지 못했어. 서버와 DB를 확인해 줘.");
+    }
+}
+
+
+// 학습 자료 목록과 진도율 표시
 function renderMaterials() {
-
     materialList.replaceChildren();
 
     if (materials.length === 0) {
-
         const emptyMessage = document.createElement("p");
 
         emptyMessage.className = "empty-message";
@@ -786,11 +967,9 @@ function renderMaterials() {
         materialList.appendChild(emptyMessage);
 
         return;
-
     }
 
     materials.forEach((material) => {
-
         const item = document.createElement("div");
 
         item.className = "material-item";
@@ -808,7 +987,7 @@ function renderMaterials() {
         const description = document.createElement("p");
 
         description.textContent =
-            `${material.current} / ${material.total}페이지`;
+            `${material.current} / ${material.total}`;
 
         information.append(title, description);
 
@@ -840,15 +1019,15 @@ function renderMaterials() {
         const remaining = document.createElement("span");
 
         remaining.textContent =
-            `남은 페이지 ${Math.max(0, material.total - material.current)}p`;
+            `남은 진도 ${Math.max(0, material.total - material.current)}`;
 
         const updateButton = document.createElement("button");
 
         updateButton.type = "button";
         updateButton.textContent = "진도 수정";
 
-        updateButton.addEventListener("click", () => {
-
+        // 수정한 진도를 서버에 저장
+        updateButton.addEventListener("click", async () => {
             const input = prompt(
                 "현재까지 공부한 페이지를 입력해 줘.",
                 material.current
@@ -865,17 +1044,39 @@ function renderMaterials() {
                 page < 0 ||
                 page > material.total
             ) {
-
-                alert(`0부터 ${material.total} 사이의 정수를 입력해 줘.`);
+                alert(
+                    `0부터 ${material.total} 사이의 정수를 입력해 줘.`
+                );
 
                 return;
-
             }
 
-            material.current = page;
+            try {
+                const response = await fetch(
+                    `/api/learning-materials/${material.id}/progress`,
+                    {
+                        method: "PATCH",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            current: page
+                        })
+                    }
+                );
 
-            renderMaterials();
+                if (!response.ok) {
+                    throw new Error(
+                        `진도 저장 실패 (${response.status})`
+                    );
+                }
 
+                await loadMaterials();
+
+            } catch (error) {
+                console.error("학습 진도 저장 오류:", error);
+                alert("진도를 저장하지 못했어. 서버 로그를 확인해 줘.");
+            }
         });
 
         bottom.append(remaining, updateButton);
@@ -883,19 +1084,19 @@ function renderMaterials() {
         item.append(top, track, bottom);
 
         materialList.appendChild(item);
-
     });
-
 }
 
 
-materialForm.addEventListener("submit", (event) => {
-
+// 학습 자료 등록
+materialForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const title = document.querySelector("#material-title").value.trim();
 
-    const total = Number(document.querySelector("#material-total").value);
+    const total = Number(
+        document.querySelector("#material-total").value
+    );
 
     const current = Number(
         document.querySelector("#material-current").value
@@ -909,36 +1110,46 @@ materialForm.addEventListener("submit", (event) => {
         current < 0 ||
         current > total
     ) {
-
         alert("자료 이름과 페이지 수를 올바르게 입력해 줘.");
 
         return;
-
     }
 
-    materials.push({
-        id: nextMaterialId,
-        title: title,
-        total: total,
-        current: current
-    });
+    try {
+        const response = await fetch("/api/learning-materials", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title: title,
+                total: total,
+                current: current
+            })
+        });
 
-    nextMaterialId += 1;
+        if (!response.ok) {
+            const errorMessage = await response.text();
 
-    materialForm.reset();
+            throw new Error(
+                `자료 등록 실패 (${response.status}): ${errorMessage}`
+            );
+        }
 
-    renderMaterials();
+        materialForm.reset();
 
+        await loadMaterials();
+
+    } catch (error) {
+        console.error("학습 자료 등록 오류:", error);
+        alert("학습 자료를 등록하지 못했어. 서버 로그를 확인해 줘.");
+    }
 });
 
 
 /* INITIALIZE */
 
 resetTimer();
-
-renderCalendar();
-renderSchedules();
-renderMaterials();
-renderRecords();
-updateTodayTotal();
-updateCompletedCount();
+loadStudyRecords();
+loadSchedules();
+loadMaterials();
