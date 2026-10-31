@@ -28,10 +28,9 @@ dependencies {
     // 로그인 및 보안
     implementation 'org.springframework.boot:spring-boot-starter-security'
 
+    // 로그인 세션을 PostgreSQL에 저장
+    implementation 'org.springframework.boot:spring-boot-starter-session-jdbc'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
 }
