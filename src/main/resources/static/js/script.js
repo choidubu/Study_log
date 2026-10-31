@@ -1,4 +1,261 @@
-/* TIMER */
+
+/* 로그인 및 회원가입 */
+
+const authContainer = document.querySelector("#auth-container");
+const appContainer = document.querySelector("#app-container");
+
+const loginForm = document.querySelector("#login-form");
+const signupForm = document.querySelector("#signup-form");
+
+const authMessage = document.querySelector("#auth-message");
+
+const showSignupButton = document.querySelector("#show-signup");
+const showLoginButton = document.querySelector("#show-login");
+
+let currentUserEmail = "";
+let appInitialized = false;
+
+
+// 로그인 화면 표시
+function showLogin() {
+    authContainer.hidden = false;
+    appContainer.hidden = true;
+
+    loginForm.classList.remove("hidden");
+    signupForm.classList.add("hidden");
+
+    authMessage.textContent = "";
+}
+
+
+// 회원가입 화면 표시
+function showSignup() {
+    loginForm.classList.add("hidden");
+    signupForm.classList.remove("hidden");
+
+    authMessage.textContent = "";
+}
+
+
+// 로그인한 회원 정보 표시
+function addUserInfo() {
+    const header = appContainer.querySelector("header");
+
+    if (!header || document.querySelector("#user-info")) {
+        return;
+    }
+
+    const userInfo = document.createElement("div");
+
+    userInfo.id = "user-info";
+
+    const emailText = document.createElement("span");
+
+    emailText.textContent = currentUserEmail;
+
+    const logoutButton = document.createElement("button");
+
+    logoutButton.type = "button";
+    logoutButton.textContent = "로그아웃";
+    logoutButton.className = "button button-secondary";
+
+    logoutButton.addEventListener("click", logout);
+
+    userInfo.append(emailText, logoutButton);
+
+    header.appendChild(userInfo);
+}
+
+
+// 로그인 후 공부 화면 표시
+function showApp(email) {
+    currentUserEmail = email;
+
+    authContainer.hidden = true;
+    appContainer.hidden = false;
+
+    addUserInfo();
+
+    if (!appInitialized) {
+        appInitialized = true;
+
+        resetTimer();
+        loadStudyRecords();
+        loadSchedules();
+        loadMaterials();
+    }
+}
+
+
+// 로그인 상태 확인
+async function checkLoginStatus() {
+    try {
+        const response = await fetch("/api/auth/me");
+
+        if (!response.ok) {
+            showLogin();
+            return;
+        }
+
+        const user = await response.json();
+
+        showApp(user.email);
+
+    } catch (error) {
+        console.error("로그인 상태 확인 오류:", error);
+        showLogin();
+    }
+}
+
+
+// 회원가입
+signupForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.querySelector("#signup-email").value.trim();
+    const password = document.querySelector("#signup-password").value;
+    const passwordConfirm = document.querySelector("#signup-password-confirm").value;
+
+    if (!email || !password || !passwordConfirm) {
+        authMessage.textContent = "모든 항목을 입력해 줘.";
+        return;
+    }
+
+    if (password.length < 8) {
+        authMessage.textContent = "비밀번호는 8자 이상 입력해 줘.";
+        return;
+    }
+
+    if (password !== passwordConfirm) {
+        authMessage.textContent = "비밀번호가 일치하지 않아.";
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/auth/signup", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "회원가입에 실패했어.");
+        }
+
+        signupForm.reset();
+
+        showLogin();
+
+        document.querySelector("#login-email").value = email;
+
+        authMessage.textContent = "회원가입이 완료됐어. 로그인해 줘.";
+
+    } catch (error) {
+        authMessage.textContent = error.message;
+    }
+});
+
+
+// 로그인
+loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.querySelector("#login-email").value.trim();
+    const password = document.querySelector("#login-password").value;
+
+    if (!email || !password) {
+        authMessage.textContent = "이메일과 비밀번호를 입력해 줘.";
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "로그인에 실패했어.");
+        }
+
+        const userResponse = await fetch("/api/auth/me", {
+            credentials: "same-origin"
+        });
+
+        if (!userResponse.ok) {
+            throw new Error("로그인 상태를 확인하지 못했어.");
+        }
+
+        const user = await userResponse.json();
+
+        loginForm.reset();
+
+        showApp(user.email);
+
+    } catch (error) {
+        authMessage.textContent = error.message;
+    }
+});
+
+
+// 로그아웃
+async function logout() {
+    try {
+        const response = await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "same-origin"
+        });
+
+        if (!response.ok) {
+            throw new Error("로그아웃에 실패했어.");
+        }
+
+        if (typeof stopTimer === "function") {
+            stopTimer();
+        }
+
+        currentUserEmail = "";
+        appInitialized = false;
+
+        const userInfo = document.querySelector("#user-info");
+
+        if (userInfo) {
+            userInfo.remove();
+        }
+
+        showLogin();
+
+    } catch (error) {
+        console.error("로그아웃 오류:", error);
+        alert("로그아웃하지 못했어. 다시 시도해 줘.");
+    }
+}
+
+
+// 로그인 및 회원가입 화면 전환
+showSignupButton.addEventListener("click", showSignup);
+
+showLoginButton.addEventListener("click", showLogin);
+
+
+/* 타이머 */
 
 const timerDisplay = document.querySelector("#timer-display");
 const todayTotal = document.querySelector("#today-total");
@@ -33,8 +290,8 @@ let pendingStudySeconds = 0;
 const studyRecords = [];
 
 
+// 시간을 시:분:초 형식으로 변환
 function formatTime(totalSeconds) {
-
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
@@ -44,10 +301,10 @@ function formatTime(totalSeconds) {
         String(minutes).padStart(2, "0"),
         String(seconds).padStart(2, "0")
     ].join(":");
-
 }
 
 
+// 공부 시간을 읽기 쉬운 형식으로 변환
 function formatStudyDuration(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -69,23 +326,25 @@ function formatStudyDuration(totalSeconds) {
 }
 
 
+// 타이머 화면 갱신
 function updateTimerDisplay() {
-
     const seconds = timerMode === "stopwatch"
         ? timerSeconds
         : remainingSeconds;
 
     timerDisplay.textContent = formatTime(seconds);
-
 }
 
 
+// 오늘 공부 시간 갱신
 function updateTodayTotal() {
     todayTotal.textContent = formatTime(todayStudySeconds);
 
     updateGoalProgress();
 }
 
+
+// 목표 달성률 갱신
 function updateGoalProgress() {
     const targetSeconds = dailyGoalHours * 3600;
 
@@ -107,8 +366,8 @@ function updateGoalProgress() {
 }
 
 
+// 서버에서 공부 기록 불러오기
 async function loadStudyRecords() {
-
     try {
         const response = await fetch("/api/study-records");
 
@@ -139,18 +398,16 @@ async function loadStudyRecords() {
     } catch (error) {
         console.error("공부 기록 조회 오류:", error);
     }
-
 }
 
 
-async function renderRecords() {
-
+// 공부 기록 목록 표시
+function renderRecords() {
     const recordList = document.querySelector("#record-list");
 
     recordList.replaceChildren();
 
     if (studyRecords.length === 0) {
-
         const emptyMessage = document.createElement("p");
 
         emptyMessage.className = "empty-message";
@@ -159,11 +416,9 @@ async function renderRecords() {
         recordList.appendChild(emptyMessage);
 
         return;
-
     }
 
     studyRecords.forEach((record) => {
-
         const item = document.createElement("div");
         item.className = "record-item";
 
@@ -185,9 +440,7 @@ async function renderRecords() {
         deleteButton.textContent = "삭제";
 
         deleteButton.addEventListener("click", async () => {
-
             try {
-
                 const response = await fetch(
                     `/api/study-records/${record.id}`,
                     {
@@ -202,25 +455,20 @@ async function renderRecords() {
                 await loadStudyRecords();
 
             } catch (error) {
-
                 console.error("공부 기록 삭제 오류:", error);
-                alert("기록을 삭제하지 못했어. 서버 연결을 확인해 줺.");
-
+                alert("기록을 삭제하지 못했어. 서버 연결을 확인해 줘.");
             }
-
         });
 
         item.append(information, deleteButton);
 
         recordList.appendChild(item);
-
     });
-
 }
 
 
+// 공부 기록 저장
 async function saveStudyRecord(seconds, label) {
-
     if (seconds <= 0) {
         return false;
     }
@@ -251,24 +499,22 @@ async function saveStudyRecord(seconds, label) {
 
         return false;
     }
-
 }
 
 
+// 타이머 정지
 function stopTimer() {
-
     clearInterval(timerInterval);
 
     timerInterval = null;
     timerRunning = false;
 
     startButton.disabled = false;
-
 }
 
 
+// 타이머 종료 후 기록 저장
 function finishTimer() {
-
     stopTimer();
 
     sessionFinished = true;
@@ -288,9 +534,7 @@ function finishTimer() {
     saveButton.className = "button button-primary";
     saveButton.textContent = "기록 저장";
 
-
     saveButton.addEventListener("click", async () => {
-
         saveButton.disabled = true;
 
         const saved = await saveStudyRecord(
@@ -305,12 +549,11 @@ function finishTimer() {
             pendingStudySeconds = 0;
 
             saveButton.remove();
+
         } else {
             saveButton.disabled = false;
         }
-
     });
-
 
     const oldSaveButton = document.querySelector("#save-session-button");
 
@@ -322,22 +565,18 @@ function finishTimer() {
 
     timerMessage.appendChild(document.createTextNode(" "));
     timerMessage.appendChild(saveButton);
-
 }
 
 
+// 타이머 1초 진행
 function tickTimer() {
-
     if (timerMode === "stopwatch") {
-
         timerSeconds += 1;
 
     } else {
-
         remainingSeconds -= 1;
 
         if (remainingSeconds <= 0) {
-
             remainingSeconds = 0;
 
             updateTimerDisplay();
@@ -348,36 +587,28 @@ function tickTimer() {
             );
 
             return;
-
         }
-
     }
 
     updateTimerDisplay();
-
 }
 
 
+// 타이머 시작
 function startTimer() {
-
     if (timerRunning || sessionFinished) {
         return;
     }
 
     if (timerMode === "countdown" && remainingSeconds <= 0) {
-
         const minutes = Number(timerMinutes.value);
 
         if (!Number.isFinite(minutes) || minutes < 1) {
-
             timerMessage.textContent = "목표 시간을 1분 이상 입력해 줘.";
-
             return;
-
         }
 
         remainingSeconds = Math.floor(minutes * 60);
-
     }
 
     timerMessage.textContent = "";
@@ -386,12 +617,11 @@ function startTimer() {
     startButton.disabled = true;
 
     timerInterval = setInterval(tickTimer, 1000);
-
 }
 
 
+// 타이머 일시정지
 function pauseTimer() {
-
     if (!timerRunning) {
         return;
     }
@@ -399,12 +629,11 @@ function pauseTimer() {
     stopTimer();
 
     timerMessage.textContent = "타이머를 일시정지했어.";
-
 }
 
 
+// 타이머 초기화
 function resetTimer() {
-
     stopTimer();
 
     timerSeconds = 0;
@@ -425,14 +654,12 @@ function resetTimer() {
     }
 
     updateTimerDisplay();
-
 }
 
 
+// 타이머 모드 변경
 tabButtons.forEach((button) => {
-
     button.addEventListener("click", () => {
-
         stopTimer();
 
         timerMode = button.dataset.mode;
@@ -464,27 +691,27 @@ tabButtons.forEach((button) => {
         }
 
         updateTimerDisplay();
-
     });
-
 });
 
 
+// 카운트다운 시간 변경
 timerMinutes.addEventListener("change", () => {
-
     if (!timerRunning && timerMode === "countdown") {
         resetTimer();
     }
-
 });
 
 
+// 타이머 버튼 연결
 startButton.addEventListener("click", startTimer);
 
 pauseButton.addEventListener("click", pauseTimer);
 
 resetButton.addEventListener("click", resetTimer);
 
+
+// 하루 공부 목표 저장
 document.querySelector("#goal-save-button").addEventListener("click", () => {
     const hours = Number(goalHoursInput.value);
 
@@ -503,8 +730,8 @@ document.querySelector("#goal-save-button").addEventListener("click", () => {
 });
 
 
+// 공부 시간 직접 추가
 document.querySelector("#manual-save-button").addEventListener("click", async () => {
-
     const hours = Number(document.querySelector("#manual-hours").value);
     const minutes = Number(document.querySelector("#manual-minutes").value);
 
@@ -518,7 +745,6 @@ document.querySelector("#manual-save-button").addEventListener("click", async ()
         hours * 60 + minutes <= 0
     ) {
         timerMessage.textContent = "시간과 분을 올바르게 입력해 줘.";
-
         return;
     }
 
@@ -532,11 +758,10 @@ document.querySelector("#manual-save-button").addEventListener("click", async ()
 
         timerMessage.textContent = "공부 시간을 기록에 추가했어!";
     }
-
 });
 
 
-/* CALENDAR */
+/* 캘린더 */
 
 const calendarMonth = document.querySelector("#calendar-month");
 const calendarDays = document.querySelector("#calendar-days");
@@ -551,7 +776,9 @@ const scheduleList = document.querySelector("#schedule-list");
 const scheduleTypes = {
     study: "공부",
     lecture: "강의",
-    deadline: "마감"
+    deadline: "마감",
+    exam: "시험",
+    general: "일반"
 };
 
 const today = new Date();
@@ -566,6 +793,7 @@ let schedules = [];
 scheduleDate.value = selectedDate;
 
 
+// 날짜를 연-월-일 형식으로 변환
 function formatDate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -726,7 +954,7 @@ function renderSchedules() {
             `${schedule.title} 완료 여부`
         );
 
-        // 완료 상태를 DB에 저장
+        // 일정 완료 상태를 서버에 저장
         checkbox.addEventListener("change", async () => {
             try {
                 const response = await fetch(
@@ -777,7 +1005,7 @@ function renderSchedules() {
         deleteButton.type = "button";
         deleteButton.textContent = "삭제";
 
-        // DB에서 일정 삭제
+        // 서버에서 일정 삭제
         deleteButton.addEventListener("click", async () => {
             try {
                 const response = await fetch(
@@ -806,7 +1034,7 @@ function renderSchedules() {
 }
 
 
-// 완료한 일정 개수
+// 완료한 일정 개수 표시
 function updateCompletedCount() {
     const completedCount = schedules.filter(
         (schedule) => schedule.completed
@@ -817,7 +1045,7 @@ function updateCompletedCount() {
 }
 
 
-// 날짜 입력창에서 날짜를 바꾸면 달력 선택도 동기화
+// 날짜 입력창과 달력 선택 동기화
 scheduleDate.addEventListener("change", () => {
     if (!scheduleDate.value) {
         return;
@@ -835,8 +1063,7 @@ scheduleDate.addEventListener("change", () => {
 });
 
 
-// 일정 등록 후 서버에서 다시 불러오기
-
+// 일정 등록
 scheduleForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -852,7 +1079,6 @@ scheduleForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    // 입력창에서 선택한 날짜를 그대로 사용
     selectedDate = dateToSave;
 
     const [year, month] = dateToSave.split("-").map(Number);
@@ -892,8 +1118,7 @@ scheduleForm.addEventListener("submit", async (event) => {
 });
 
 
-
-// 이전 달
+// 이전 달로 이동
 document.querySelector("#prev-month").addEventListener("click", () => {
     displayedMonth -= 1;
 
@@ -906,7 +1131,7 @@ document.querySelector("#prev-month").addEventListener("click", () => {
 });
 
 
-// 다음 달
+// 다음 달로 이동
 document.querySelector("#next-month").addEventListener("click", () => {
     displayedMonth += 1;
 
@@ -919,7 +1144,7 @@ document.querySelector("#next-month").addEventListener("click", () => {
 });
 
 
-/* LEARNING MATERIALS */
+/* 학습 자료 */
 
 const materialForm = document.querySelector("#material-form");
 const materialList = document.querySelector("#material-list");
@@ -1026,7 +1251,42 @@ function renderMaterials() {
         updateButton.type = "button";
         updateButton.textContent = "진도 수정";
 
-        // 수정한 진도를 서버에 저장
+        const deleteButton = document.createElement("button");
+
+        deleteButton.type = "button";
+        deleteButton.textContent = "삭제";
+
+        // 학습 자료 삭제
+        deleteButton.addEventListener("click", async () => {
+            const confirmed = confirm(
+                `"${material.title}" 자료를 삭제할까?`
+            );
+
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `/api/learning-materials/${material.id}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("학습 자료 삭제에 실패했습니다.");
+                }
+
+                await loadMaterials();
+
+            } catch (error) {
+                console.error("학습 자료 삭제 오류:", error);
+                alert("학습 자료를 삭제하지 못했어. 서버 로그를 확인해 줘.");
+            }
+        });
+
+        // 학습 진도 수정
         updateButton.addEventListener("click", async () => {
             const input = prompt(
                 "현재까지 공부한 페이지를 입력해 줘.",
@@ -1079,7 +1339,7 @@ function renderMaterials() {
             }
         });
 
-        bottom.append(remaining, updateButton);
+        bottom.append(remaining, updateButton, deleteButton);
 
         item.append(top, track, bottom);
 
@@ -1147,9 +1407,7 @@ materialForm.addEventListener("submit", async (event) => {
 });
 
 
-/* INITIALIZE */
+/* 초기 화면 설정 */
 
-resetTimer();
-loadStudyRecords();
-loadSchedules();
-loadMaterials();
+// 로그인 상태를 확인한 뒤 화면 표시
+checkLoginStatus();

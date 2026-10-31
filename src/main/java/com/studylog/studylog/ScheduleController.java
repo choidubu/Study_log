@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -28,21 +29,38 @@ public class ScheduleController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    // 로그인한 회원의 ID 조회
+    private Long getUserId(Authentication authentication) {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE email = ?",
+                Long.class,
+                authentication.getName()
+        );
+    }
+
     // 일정 전체 조회
     @GetMapping
-    public List<Map<String, Object>> getSchedules() {
+    public List<Map<String, Object>> getSchedules(
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
+
         return jdbcTemplate.queryForList(
                 "SELECT id, " +
                 "TO_CHAR(schedule_date, 'YYYY-MM-DD') AS schedule_date, " +
                 "title, schedule_type, completed " +
-                "FROM schedules ORDER BY schedule_date, id"
+                "FROM schedules " +
+                "WHERE user_id = ? " +
+                "ORDER BY schedule_date, id",
+                userId
         );
     }
 
     // 일정 등록
     @PostMapping
     public Map<String, Object> saveSchedule(
-            @RequestBody Map<String, Object> request) {
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
 
         Object dateValue = request.get("date");
         Object titleValue = request.get("title");
@@ -62,11 +80,11 @@ public class ScheduleController {
         String type = ((String) typeValue).trim();
 
         if (dateText.isEmpty()
-                || title.isEmpty()
-                || !List.of("study", "lecture", "deadline").contains(type)) {
+        || title.isEmpty()
+        || !List.of("study", "lecture", "deadline", "exam", "general").contains(type)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "일정 정보를 확인해 주세요."
+                    "일정 정보를 올바르게 입력해 주세요."
             );
         }
 
@@ -82,10 +100,13 @@ public class ScheduleController {
         }
 
         Date scheduleDate = Date.valueOf(localDate);
+        Long userId = getUserId(authentication);
 
         jdbcTemplate.update(
                 "INSERT INTO schedules " +
-                "(schedule_date, title, schedule_type) VALUES (?, ?, ?)",
+                "(user_id, schedule_date, title, schedule_type) " +
+                "VALUES (?, ?, ?, ?)",
+                userId,
                 scheduleDate,
                 title,
                 type
@@ -101,7 +122,8 @@ public class ScheduleController {
     @PatchMapping("/{id}/completed")
     public Map<String, Object> updateCompleted(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
 
         Object value = request.get("completed");
 
@@ -112,10 +134,14 @@ public class ScheduleController {
             );
         }
 
+        Long userId = getUserId(authentication);
+
         int updatedRows = jdbcTemplate.update(
-                "UPDATE schedules SET completed = ? WHERE id = ?",
+                "UPDATE schedules SET completed = ? " +
+                "WHERE id = ? AND user_id = ?",
                 value,
-                id
+                id,
+                userId
         );
 
         if (updatedRows == 0) {
@@ -132,11 +158,16 @@ public class ScheduleController {
 
     // 일정 삭제
     @DeleteMapping("/{id}")
-    public Map<String, Object> deleteSchedule(@PathVariable Long id) {
+    public Map<String, Object> deleteSchedule(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
 
         int deletedRows = jdbcTemplate.update(
-                "DELETE FROM schedules WHERE id = ?",
-                id
+                "DELETE FROM schedules WHERE id = ? AND user_id = ?",
+                id,
+                userId
         );
 
         if (deletedRows == 0) {

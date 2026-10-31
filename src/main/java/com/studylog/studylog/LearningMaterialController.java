@@ -5,6 +5,8 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,19 +26,35 @@ public class LearningMaterialController {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    // 로그인한 회원의 ID 조회
+    private Long getUserId(Authentication authentication) {
+        return jdbcTemplate.queryForObject(
+                "SELECT id FROM users WHERE email = ?",
+                Long.class,
+                authentication.getName()
+        );
+    }
+
     // 학습 자료 전체 조회
     @GetMapping
-    public List<Map<String, Object>> getMaterials() {
+    public List<Map<String, Object>> getMaterials(
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
+
         return jdbcTemplate.queryForList(
                 "SELECT id, title, total_pages, current_page " +
-                "FROM learning_materials ORDER BY id DESC"
+                "FROM learning_materials " +
+                "WHERE user_id = ? ORDER BY id DESC",
+                userId
         );
     }
 
     // 학습 자료 등록
     @PostMapping
     public Map<String, Object> saveMaterial(
-            @RequestBody Map<String, Object> request) {
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
 
         Object titleValue = request.get("title");
         Object totalValue = request.get("total");
@@ -63,10 +81,13 @@ public class LearningMaterialController {
             );
         }
 
+        Long userId = getUserId(authentication);
+
         jdbcTemplate.update(
                 "INSERT INTO learning_materials " +
-                "(title, total_pages, current_page) VALUES (?, ?, ?)",
-                title, total, current
+                "(user_id, title, total_pages, current_page) " +
+                "VALUES (?, ?, ?, ?)",
+                userId, title, total, current
         );
 
         return Map.of(
@@ -78,7 +99,8 @@ public class LearningMaterialController {
     @PatchMapping("/{id}/progress")
     public Map<String, Object> updateProgress(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> request) {
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
 
         Object currentValue = request.get("current");
 
@@ -90,10 +112,12 @@ public class LearningMaterialController {
         }
 
         int current = ((Number) currentValue).intValue();
+        Long userId = getUserId(authentication);
 
         List<Map<String, Object>> results = jdbcTemplate.queryForList(
-                "SELECT total_pages FROM learning_materials WHERE id = ?",
-                id
+                "SELECT total_pages FROM learning_materials " +
+                "WHERE id = ? AND user_id = ?",
+                id, userId
         );
 
         if (results.isEmpty()) {
@@ -113,13 +137,40 @@ public class LearningMaterialController {
         }
 
         jdbcTemplate.update(
-                "UPDATE learning_materials SET current_page = ? WHERE id = ?",
-                current, id
+                "UPDATE learning_materials SET current_page = ? " +
+                "WHERE id = ? AND user_id = ?",
+                current, id, userId
         );
 
         return Map.of(
                 "message", "학습 진도가 저장되었습니다.",
                 "current", current
+        );
+    }
+
+    // 학습 자료 삭제
+    @DeleteMapping("/{id}")
+    public Map<String, Object> deleteMaterial(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        Long userId = getUserId(authentication);
+
+        int deletedRows = jdbcTemplate.update(
+                "DELETE FROM learning_materials " +
+                "WHERE id = ? AND user_id = ?",
+                id, userId
+        );
+
+        if (deletedRows == 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "학습 자료를 찾을 수 없습니다."
+            );
+        }
+
+        return Map.of(
+                "message", "학습 자료가 삭제되었습니다."
         );
     }
 }

@@ -8,281 +8,347 @@
     <title>Study Log | 공부 기록</title>
 
     <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/png" href="/study_log_favicon.png">
 </head>
 
 <body>
 
-    <!-- HEADER -->
+    <!-- 로그인 및 회원가입 -->
 
-    <header class="header">
-        <a href="#" class="logo">Study Log<span>.</span></a>
-        <p class="header-message">오늘의 공부를 차근차근 기록해요.</p>
-    </header>
+    <section id="auth-container" class="auth-container">
+
+        <div class="auth-card">
+
+            <a href="#" class="logo">Study Log<span>.</span></a>
+
+            <form id="login-form" class="auth-form">
+
+                <h2>로그인</h2>
+
+                <label for="login-email">이메일</label>
+                <input type="email" id="login-email" placeholder="이메일 주소를 입력해 주세요." required>
+
+                <label for="login-password">비밀번호</label>
+                <input type="password" id="login-password" placeholder="비밀번호를 입력해 주세요." required>
+
+                <button type="submit" class="button button-primary">
+                    로그인
+                </button>
+
+                <p class="auth-switch">
+                    아직 회원이 아니신가요?
+                    <button type="button" id="show-signup">회원가입</button>
+                </p>
+
+            </form>
+
+            <form id="signup-form" class="auth-form hidden">
+
+                <h2>회원가입</h2>
+
+                <label for="signup-email">이메일</label>
+                <input type="email" id="signup-email" placeholder="이메일 주소를 입력해 주세요." required>
+
+                <label for="signup-password">비밀번호</label>
+                <input type="password" id="signup-password" placeholder="비밀번호를 입력해 주세요." minlength="8" required>
+
+                <label for="signup-password-confirm">비밀번호 확인</label>
+                <input type="password" id="signup-password-confirm" placeholder="비밀번호를 다시 입력해 주세요." minlength="8"
+                    required>
+
+                <button type="submit" class="button button-primary">
+                    회원가입
+                </button>
+
+                <p class="auth-switch">
+                    이미 회원이신가요?
+                    <button type="button" id="show-login">로그인</button>
+                </p>
+
+            </form>
+
+            <p id="auth-message" class="message" aria-live="polite"></p>
+
+        </div>
+
+    </section>
 
 
-    <!-- MAIN -->
-    <main class="container">
+    <!-- 공부 기록 화면 -->
 
-        <!-- SUMMARY -->
+    <div id="app-container" hidden>
 
-        <section class="summary">
+        <!-- 상단 영역 -->
 
-            <div class="summary-card green">
-                <p>오늘의 목표</p>
+        <header class="header">
+            <a href="#" class="logo">Study Log<span>.</span></a>
+        </header>
 
-                <h2 id="goal-target-display">3시간</h2>
 
-                <div class="goal-settings">
-                    <input type="number" id="goal-hours" min="1" max="24" value="3" aria-label="오늘의 목표 시간">
+        <!-- 메인 영역 -->
 
-                    <button type="button" id="goal-save-button">
-                        목표 설정
+        <main class="container">
+
+            <!-- 오늘의 공부 현황 -->
+
+            <section class="summary">
+
+                <div class="summary-card green">
+                    <p>오늘의 목표</p>
+
+                    <h2 id="goal-target-display">3시간</h2>
+
+                    <div class="goal-settings">
+                        <input type="number" id="goal-hours" min="1" max="24" value="3" aria-label="오늘의 목표 시간">
+
+                        <button type="button" id="goal-save-button">
+                            목표 설정
+                        </button>
+                    </div>
+                </div>
+
+                <div class="summary-card purple">
+                    <p>공부 시간 달성</p>
+
+                    <h2 id="today-total">00:00:00</h2>
+
+                    <p id="goal-progress-text">00:00:00 / 03:00:00</p>
+
+                    <div class="goal-progress-track">
+                        <div id="goal-progress-bar" class="goal-progress-bar"></div>
+                    </div>
+
+                    <p id="goal-progress-percent">0% 달성</p>
+                </div>
+
+                <div class="summary-card orange">
+                    <p>오늘 완료한 일정</p>
+                    <h2 id="completed-count">0개</h2>
+                </div>
+
+            </section>
+
+
+            <!-- 공부 타이머 -->
+
+            <section class="panel timer-panel">
+
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">FOCUS TIME</p>
+                        <h2>공부 타이머</h2>
+                    </div>
+                </div>
+
+                <div class="timer-tabs">
+
+                    <button class="tab-button active" data-mode="stopwatch">
+                        스톱워치
                     </button>
-                </div>
-            </div>
 
-            <div class="summary-card purple">
-                <p>공부 시간 달성</p>
-
-                <h2 id="today-total">00:00:00</h2>
-
-                <p id="goal-progress-text">00:00:00 / 03:00:00</p>
-
-                <div class="goal-progress-track">
-                    <div id="goal-progress-bar" class="goal-progress-bar"></div>
-                </div>
-
-                <p id="goal-progress-percent">0% 달성</p>
-            </div>
-
-            <div class="summary-card orange">
-                <p>오늘 완료한 일정</p>
-                <h2 id="completed-count">0개</h2>
-            </div>
-
-        </section>
-
-
-        <!-- STUDY TIMER -->
-
-        <section class="panel timer-panel">
-
-            <div class="section-heading">
-                <div>
-                    <p class="eyebrow">FOCUS TIME</p>
-                    <h2>공부 타이머</h2>
-                </div>
-            </div>
-
-            <div class="timer-tabs">
-
-                <button class="tab-button active" data-mode="stopwatch">
-                    스톱워치
-                </button>
-
-                <button class="tab-button" data-mode="countdown">
-                    카운트다운
-                </button>
-
-            </div>
-
-            <div id="timer-display" class="timer-display">00:00:00</div>
-
-            <div id="countdown-settings" class="countdown-settings hidden">
-
-                <label for="timer-minutes">목표 시간 (분)</label>
-
-                <input type="number" id="timer-minutes" min="1" max="1440" value="60">
-
-            </div>
-
-            <div class="timer-buttons">
-
-                <button id="start-button" class="button button-primary">
-                    시작
-                </button>
-
-                <button id="pause-button" class="button button-light">
-                    일시정지
-                </button>
-
-                <button id="reset-button" class="button button-light">
-                    초기화
-                </button>
-
-            </div>
-
-            <div class="manual-record">
-
-                <h3>직접 공부 시간 기록하기</h3>
-
-                <p>타이머를 사용하지 않았어도 공부 시간을 기록할 수 있어.</p>
-
-                <div class="manual-inputs">
-
-                    <input type="number" id="manual-hours" min="0" max="24" placeholder="시간">
-
-                    <input type="number" id="manual-minutes" min="0" max="59" placeholder="분">
-
-                    <button id="manual-save-button" class="button button-light">
-                        기록 추가
+                    <button class="tab-button" data-mode="countdown">
+                        카운트다운
                     </button>
 
                 </div>
 
-            </div>
+                <div id="timer-display" class="timer-display">00:00:00</div>
 
-            <p id="timer-message" class="message" aria-live="polite"></p>
+                <div id="countdown-settings" class="countdown-settings hidden">
 
-        </section>
+                    <label for="timer-minutes">목표 시간 (분)</label>
+
+                    <input type="number" id="timer-minutes" min="1" max="1440" value="60">
+
+                </div>
+
+                <div class="timer-buttons">
+
+                    <button id="start-button" class="button button-primary">
+                        시작
+                    </button>
+
+                    <button id="pause-button" class="button button-light">
+                        일시정지
+                    </button>
+
+                    <button id="reset-button" class="button button-light">
+                        초기화
+                    </button>
+
+                </div>
+
+                <div class="manual-record">
+
+                    <h3>직접 공부 시간 기록하기</h3>
+
+                    <p>타이머를 사용하지 않았어도 공부 시간을 기록할 수 있어.</p>
+
+                    <div class="manual-inputs">
+
+                        <input type="number" id="manual-hours" min="0" max="24" placeholder="시간">
+
+                        <input type="number" id="manual-minutes" min="0" max="59" placeholder="분">
+
+                        <button id="manual-save-button" class="button button-light">
+                            기록 추가
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <p id="timer-message" class="message" aria-live="polite"></p>
+
+            </section>
 
 
-        <!-- CALENDAR AND SCHEDULE -->
+            <!-- 학습 캘린더와 일정 -->
 
-        <section class="calendar-layout">
+            <section class="calendar-layout">
 
-            <!-- CALENDAR -->
+                <div class="panel calendar-panel">
 
-            <div class="panel calendar-panel">
+                    <div class="section-heading calendar-heading">
 
-                <div class="section-heading calendar-heading">
+                        <div>
+                            <p class="eyebrow">MY SCHEDULE</p>
+                            <h2>학습 캘린더</h2>
+                        </div>
+
+                        <div class="month-buttons">
+                            <button id="prev-month" aria-label="이전 달">‹</button>
+                            <button id="next-month" aria-label="다음 달">›</button>
+                        </div>
+
+                    </div>
+
+                    <h3 id="calendar-month" class="calendar-month"></h3>
+
+                    <div class="calendar-weekdays">
+                        <span>일</span>
+                        <span>월</span>
+                        <span>화</span>
+                        <span>수</span>
+                        <span>목</span>
+                        <span>금</span>
+                        <span>토</span>
+                    </div>
+
+                    <div id="calendar-days" class="calendar-days"></div>
+
+                    <div class="schedule-legend">
+                        <span><i class="dot purple-dot"></i> 공부</span>
+                        <span><i class="dot green-dot"></i> 강의</span>
+                        <span><i class="dot orange-dot"></i> 과제·마감</span>
+                        <span><i class="dot red-dot"></i> 시험</span>
+                        <span><i class="dot gray-dot"></i> 일반 일정</span>
+                    </div>
+
+                </div>
+
+
+                <!-- 선택한 날짜의 일정 -->
+
+                <div class="panel schedule-panel">
+
+                    <p class="eyebrow">DAILY PLAN</p>
+
+                    <h2 id="selected-date-title">오늘의 일정</h2>
+
+                    <form id="schedule-form" class="schedule-form">
+
+                        <label for="schedule-title">일정 제목</label>
+
+                        <input type="text" id="schedule-title" placeholder="예: 정보처리기사 실기" maxlength="60" required>
+
+                        <label for="schedule-type">일정 유형</label>
+
+                        <select id="schedule-type">
+                            <option value="study">공부</option>
+                            <option value="lecture">강의</option>
+                            <option value="deadline">과제·마감</option>
+                            <option value="exam">시험</option>
+                            <option value="general">일반 일정</option>
+                        </select>
+
+                        <label for="schedule-date">일정 날짜</label>
+
+                        <input type="date" id="schedule-date" required>
+
+                        <button type="submit" class="button button-primary">
+                            일정 추가
+                        </button>
+
+                    </form>
+
+                    <div id="schedule-list" class="schedule-list"></div>
+
+                </div>
+
+            </section>
+
+
+            <!-- 학습 자료 진도 -->
+
+            <section class="panel materials-panel">
+
+                <div class="section-heading">
 
                     <div>
-                        <p class="eyebrow">MY SCHEDULE</p>
-                        <h2>학습 캘린더</h2>
-                    </div>
-
-                    <div class="month-buttons">
-                        <button id="prev-month" aria-label="이전 달">‹</button>
-                        <button id="next-month" aria-label="다음 달">›</button>
+                        <p class="eyebrow">MY LEARNING</p>
+                        <h2>학습 자료 진도</h2>
                     </div>
 
                 </div>
 
-                <h3 id="calendar-month" class="calendar-month"></h3>
+                <form id="material-form" class="material-form">
 
-                <div class="calendar-weekdays">
-                    <span>일</span>
-                    <span>월</span>
-                    <span>화</span>
-                    <span>수</span>
-                    <span>목</span>
-                    <span>금</span>
-                    <span>토</span>
-                </div>
+                    <input type="text" id="material-title" placeholder="책 또는 강의 이름" maxlength="60" required>
 
-                <div id="calendar-days" class="calendar-days"></div>
+                    <input type="number" id="material-total" placeholder="전체 진도" min="1" required>
 
-                <div class="schedule-legend">
-                    <span><i class="dot purple-dot"></i> 공부</span>
-                    <span><i class="dot green-dot"></i> 강의</span>
-                    <span><i class="dot orange-dot"></i> 과제·마감</span>
-                    <span><i class="dot red-dot"></i> 시험</span>
-                    <span><i class="dot gray-dot"></i> 일반 일정</span>
-                </div>
-
-            </div>
-
-
-            <!-- DAILY SCHEDULE -->
-
-            <div class="panel schedule-panel">
-
-                <p class="eyebrow">DAILY PLAN</p>
-
-                <h2 id="selected-date-title">오늘의 일정</h2>
-
-                <form id="schedule-form" class="schedule-form">
-
-                    <label for="schedule-title">일정 제목</label>
-
-                    <input type="text" id="schedule-title" placeholder="예: 정보처리기사 실기" maxlength="60" required>
-
-                    <label for="schedule-type">일정 유형</label>
-
-                    <select id="schedule-type">
-                        <option value="study">공부</option>
-                        <option value="lecture">강의</option>
-                        <option value="deadline">과제·마감</option>
-                        <option value="exam">시험</option>
-                        <option value="general">일반 일정</option>
-                    </select>
-
-                    <label for="schedule-date">일정 날짜</label>
-
-                    <input type="date" id="schedule-date" required>
+                    <input type="number" id="material-current" placeholder="현재 진도" min="0" required>
 
                     <button type="submit" class="button button-primary">
-                        일정 추가
+                        자료 추가
                     </button>
 
                 </form>
 
-                <div id="schedule-list" class="schedule-list"></div>
+                <div id="material-list" class="material-list"></div>
 
-            </div>
-
-        </section>
+            </section>
 
 
-        <!-- LEARNING MATERIALS -->
+            <!-- 공부 기록 -->
 
-        <section class="panel materials-panel">
+            <section class="panel records-panel">
 
-            <div class="section-heading">
+                <p class="eyebrow">STUDY HISTORY</p>
 
-                <div>
-                    <p class="eyebrow">MY LEARNING</p>
-                    <h2>학습 자료 진도</h2>
+                <h2>이번 세션 기록</h2>
+
+                <p class="section-description">
+                    저장하기 전에 공부 시간을 확인해 줘.
+                </p>
+
+                <div id="record-list" class="record-list">
+                    <p class="empty-message">아직 저장된 공부 기록이 없어.</p>
                 </div>
 
-            </div>
+            </section>
 
-            <form id="material-form" class="material-form">
-
-                <input type="text" id="material-title" placeholder="책 또는 강의 이름" maxlength="60" required>
-
-                <input type="number" id="material-total" placeholder="전체 진도" min="1" required>
-
-                <input type="number" id="material-current" placeholder="현재 진도" min="0" required>
-
-                <button type="submit" class="button button-primary">
-                    자료 추가
-                </button>
-
-            </form>
-
-            <div id="material-list" class="material-list"></div>
-
-        </section>
+        </main>
 
 
-        <!-- STUDY RECORDS -->
+        <!-- 하단 영역 -->
 
-        <section class="panel records-panel">
+        <footer class="footer">
+            <p>© 2026 STUDY LOG</p>
+        </footer>
 
-            <p class="eyebrow">STUDY HISTORY</p>
-
-            <h2>이번 세션 기록</h2>
-
-            <p class="section-description">
-                저장하기 전에 공부 시간을 확인해 줘.
-            </p>
-
-            <div id="record-list" class="record-list">
-                <p class="empty-message">아직 저장된 공부 기록이 없어.</p>
-            </div>
-
-        </section>
-
-    </main>
-
-
-    <!-- FOOTER -->
-
-    <footer class="footer">
-        <p>© 2026 STUDY LOG</p>
-    </footer>
+    </div>
 
 
     <script src="js/script.js"></script>
